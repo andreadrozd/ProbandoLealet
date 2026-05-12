@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor Alertas Buenos Aires</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <title>Visor Alertas - SRH y ADA</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * {
@@ -13,355 +13,470 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
         body {
             font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
+            background-color: #f0f0f0;
         }
-        
-        #mapa {
+        .container {
+            display: flex;
             height: 100vh;
+            flex-direction: column;
+        }
+        .top-section {
+            display: flex;
+            flex: 1;
+            gap: 10px;
+            padding: 10px;
+        }
+        .map-container {
+            flex: 1;
+            position: relative;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #map {
             width: 100%;
+            height: 100%;
+            border-radius: 5px;
         }
-        
-        .titulo {
-            position: absolute;
-            top: 10px;
-            left: 50px;
-            background: white;
-            padding: 12px 16px;
-            border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            font-size: 16px;
-            font-weight: bold;
-            color: #333;
-            z-index: 1000;
+        .right-panels {
+            display: flex;
+            flex-direction: column;
+            width: 300px;
+            gap: 10px;
         }
-        
-        .control-container {
-            position: absolute;
-            top: 60px;
-            right: 10px;
-            background: white;
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            z-index: 1000;
-            max-height: 85vh;
+        .panel {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
-        
-        .capas-activas {
+        .panel-header {
+            background-color: #2c5282;
+            color: white;
             padding: 12px;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .capas-activas-title {
-            font-weight: bold;
-            font-size: 14px;
-            margin-bottom: 8px;
-            color: #333;
-        }
-        
-        .capa-checkbox {
+            cursor: pointer;
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            margin: 6px 0;
-            cursor: pointer;
+            font-weight: bold;
         }
-        
-        .capa-checkbox input[type="checkbox"] {
-            margin-right: 8px;
-            cursor: pointer;
-            width: 16px;
-            height: 16px;
+        .panel-header:hover {
+            background-color: #1e3a5f;
         }
-        
-        .capa-checkbox label {
-            cursor: pointer;
-            font-size: 13px;
-            color: #555;
+        .panel-toggle {
+            font-size: 18px;
+            width: 20px;
+            text-align: center;
         }
-        
-        .grafico-container {
+        .panel-content {
             padding: 12px;
-            border-bottom: 1px solid #ddd;
-            flex-shrink: 0;
-        }
-        
-        .grafico-canvas {
-            max-width: 200px;
-            max-height: 200px;
-        }
-        
-        .leyenda-container {
-            padding: 12px;
-            font-size: 12px;
             overflow-y: auto;
+            flex: 1;
             max-height: 300px;
         }
-        
-        .leyenda-title {
-            font-weight: bold;
-            margin-bottom: 8px;
-            font-size: 13px;
-            color: #333;
+        .panel.collapsed .panel-content {
+            display: none;
         }
-        
-        .leyenda-item {
+        .layer-item {
             display: flex;
             align-items: center;
-            margin: 6px 0;
-            color: #555;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
         }
-        
-        .leyenda-simbolo {
-            margin-right: 8px;
-            flex-shrink: 0;
+        .layer-item:last-child {
+            border-bottom: none;
         }
-        
-        .leyenda-color {
+        .layer-item input[type="checkbox"] {
+            margin-right: 10px;
+            cursor: pointer;
             width: 18px;
             height: 18px;
+        }
+        .layer-item label {
+            cursor: pointer;
+            flex: 1;
+        }
+        .legend-item {
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             margin-right: 8px;
+            border: 1px solid #999;
+            vertical-align: middle;
         }
-        
-        .leyenda-grupo {
-            margin-bottom: 12px;
+        .legend-symbol {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            vertical-align: middle;
         }
-        
-        .leyenda-grupo-title {
+        .bottom-section {
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin: 0 10px 10px 10px;
+            max-height: 350px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .chart-header {
             font-weight: bold;
-            font-size: 11px;
-            color: #666;
-            margin-bottom: 4px;
-            text-transform: uppercase;
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #2c5282;
+        }
+        #chartContainer {
+            flex: 1;
+            position: relative;
+            min-height: 250px;
+        }
+        .title {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: rgba(255,255,255,0.9);
+            padding: 8px 12px;
+            border-radius: 5px;
+            z-index: 500;
         }
     </style>
 </head>
 <body>
-    <div id="mapa"></div>
-    <div class="titulo">Alertas 2025-05-05</div>
-    
-    <div class="control-container">
-        <div class="capas-activas">
-            <div class="capas-activas-title">Capas activas</div>
-            <div class="capa-checkbox">
-                <input type="checkbox" id="checkSRH" checked>
-                <label for="checkSRH">SRH</label>
+    <div class="container">
+        <div class="top-section">
+            <div class="map-container">
+                <div class="title">Alertas 2025-05-05</div>
+                <div id="map"></div>
             </div>
-            <div class="capa-checkbox">
-                <input type="checkbox" id="checkADA" checked>
-                <label for="checkADA">ADA</label>
+            <div class="right-panels">
+                <div class="panel">
+                    <div class="panel-header">
+                        <span>Capas activas</span>
+                        <span class="panel-toggle">−</span>
+                    </div>
+                    <div class="panel-content">
+                        <div class="layer-item">
+                            <input type="checkbox" id="chk-srh" checked>
+                            <label for="chk-srh">SRH</label>
+                        </div>
+                        <div class="layer-item">
+                            <input type="checkbox" id="chk-ada" checked>
+                            <label for="chk-ada">ADA</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <span>Leyenda</span>
+                        <span class="panel-toggle">−</span>
+                    </div>
+                    <div class="panel-content">
+                        <div class="legend-item"><strong>Nivel de Alerta:</strong></div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: #2ecc71;"></span>
+                            1 - Verde
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: #f1c40f;"></span>
+                            2 - Amarillo
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: #e67e22;"></span>
+                            3 - Naranja
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color" style="background-color: #e74c3c;"></span>
+                            4 - Rojo
+                        </div>
+                        <div class="legend-item" style="margin-top: 15px;"><strong>Variación:</strong></div>
+                        <div class="legend-item">● Círculo = Estable</div>
+                        <div class="legend-item">▲ Flecha arriba = En aumento</div>
+                        <div class="legend-item">▼ Flecha abajo = En disminución</div>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div class="grafico-container">
-            <canvas id="pieChart" class="grafico-canvas"></canvas>
-        </div>
-        
-        <div class="leyenda-container">
-            <div class="leyenda-title">Leyenda</div>
-            
-            <div class="leyenda-grupo">
-                <div class="leyenda-grupo-title">Nivel de Alerta</div>
-                <div class="leyenda-item">
-                    <div class="leyenda-color" style="background-color: #4CAF50;"></div>
-                    <span>1 - Verde</span>
-                </div>
-                <div class="leyenda-item">
-                    <div class="leyenda-color" style="background-color: #FFC107;"></div>
-                    <span>2 - Amarillo</span>
-                </div>
-                <div class="leyenda-item">
-                    <div class="leyenda-color" style="background-color: #FF9800;"></div>
-                    <span>3 - Naranja</span>
-                </div>
-                <div class="leyenda-item">
-                    <div class="leyenda-color" style="background-color: #F44336;"></div>
-                    <span>4 - Rojo</span>
-                </div>
-            </div>
-            
-            <div class="leyenda-grupo">
-                <div class="leyenda-grupo-title">Variación</div>
-                <div class="leyenda-item">
-                    <span class="leyenda-simbolo">●</span>
-                    <span>Estable</span>
-                </div>
-                <div class="leyenda-item">
-                    <span class="leyenda-simbolo">▲</span>
-                    <span>En aumento</span>
-                </div>
-                <div class="leyenda-item">
-                    <span class="leyenda-simbolo">▼</span>
-                    <span>En disminución</span>
-                </div>
+
+        <div class="bottom-section">
+            <div class="chart-header">Distribución de Alertas (Capas Activas)</div>
+            <div id="chartContainer">
+                <canvas id="alertChart"></canvas>
             </div>
         </div>
     </div>
-    
+
     <script>
-        // Inicializar mapa
-        const mapa = L.map('mapa').setView([-34.6037, -58.3816], 10);
+        const map = L.map('map').setView([-34.6037, -58.3816], 10);
+        
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
-        }).addTo(mapa);
-        
-        // Almacenar capas
+        }).addTo(map);
+
         let geoJsonLayerSRH = null;
         let geoJsonLayerADA = null;
-        let chartInstance = null;
-        const capasActivas = { SRH: true, ADA: true };
-        
-        // Funciones de utilidad
-        function getColor(alerta) {
-            const alertaNum = parseInt(alerta);
-            switch(alertaNum) {
-                case 1: return '#4CAF50';
-                case 2: return '#FFC107';
-                case 3: return '#FF9800';
-                case 4: return '#F44336';
-                default: return '#999999';
-            }
-        }
-        
-        function createCircleMarker(feature, latlng) {
-            const alerta = feature.properties.Alerta;
-            const dif = feature.properties.Dif;
-            const color = getColor(alerta);
+        let chart = null;
+
+        // Colores por Alerta
+        const alertColors = {
+            1: '#2ecc71',
+            2: '#f1c40f',
+            3: '#e67e22',
+            4: '#e74c3c'
+        };
+
+        // Crear símbolo según Dif
+        function createSymbol(dif, alerta) {
+            const color = alertColors[alerta] || '#999';
             
-            let html = '';
             if (dif === 0) {
-                html = `<div style="width: 24px; height: 24px; background-color: ${color}; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.3);"></div>`;
+                // Círculo
+                return L.circleMarker([0, 0], {
+                    radius: 8,
+                    fillColor: color,
+                    color: '#333',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                });
             } else if (dif === 1) {
-                html = `<div style="width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 20px solid ${color}; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));"></div>`;
-            } else if (dif === -1) {
-                html = `<div style="width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 20px solid ${color}; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));"></div>`;
-            }
-            
-            return L.marker(latlng, {
-                icon: L.divIcon({
-                    html: html,
-                    className: '',
+                // Flecha arriba
+                return L.divIcon({
+                    html: `<div style="color: ${color}; font-size: 24px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">▲</div>`,
                     iconSize: [24, 24],
-                    iconAnchor: [12, 12]
+                    className: ''
+                });
+            } else if (dif === -1) {
+                // Flecha abajo
+                return L.divIcon({
+                    html: `<div style="color: ${color}; font-size: 24px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">▼</div>`,
+                    iconSize: [24, 24],
+                    className: ''
+                });
+            }
+        }
+
+        // Crear popup con campos específicos
+        function createPopup(feature, layer, fields) {
+            let popupContent = '<div style="font-size: 12px;">';
+            fields.forEach(field => {
+                const value = feature.properties[field] || 'N/A';
+                popupContent += `<strong>${field}:</strong> ${value}<br>`;
+            });
+            popupContent += '</div>';
+            return popupContent;
+        }
+
+        // Cargar capa SRH
+        function loadSRH() {
+            fetch('mi-capa.geojson')
+                .then(response => response.json())
+                .then(data => {
+                    if (geoJsonLayerSRH) map.removeLayer(geoJsonLayerSRH);
+                    
+                    geoJsonLayerSRH = L.geoJSON(data, {
+                        pointToLayer: (feature, latlng) => {
+                            const alerta = feature.properties.Alerta;
+                            const dif = feature.properties.Dif;
+                            
+                            if (dif === 0) {
+                                return L.circleMarker(latlng, {
+                                    radius: 8,
+                                    fillColor: alertColors[alerta] || '#999',
+                                    color: '#333',
+                                    weight: 2,
+                                    opacity: 1,
+                                    fillOpacity: 0.8
+                                });
+                            } else if (dif === 1 || dif === -1) {
+                                const symbol = dif === 1 ? '▲' : '▼';
+                                return L.marker(latlng, {
+                                    icon: L.divIcon({
+                                        html: `<div style="color: ${alertColors[alerta] || '#999'}; font-size: 24px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">` + symbol + `</div>`,
+                                        iconSize: [24, 24],
+                                        className: ''
+                                    })
+                                });
+                            }
+                        },
+                        onEachFeature: (feature, layer) => {
+                            const popup = createPopup(feature, layer, ['MUNICIPIO', 'PUNTO', 'S2 Fecha', 'S3 Fecha', 'info']);
+                            layer.bindPopup(popup);
+                        }
+                    }).addTo(map);
+                    
+                    updateChart();
                 })
-            }).bindPopup(`
-                <strong>${feature.properties.MUNICIPIO}</strong><br>
-                Punto: ${feature.properties.PUNTO}<br>
-                Info: ${feature.properties.info || 'N/A'}
-            `);
+                .catch(error => console.error('Error cargando SRH:', error));
         }
-        
-        function onEachFeature(feature, layer) {
-            // Los popups se manejan en createCircleMarker
+
+        // Cargar capa ADA
+        function loadADA() {
+            fetch('mi-capa-ada.geojson')
+                .then(response => response.json())
+                .then(data => {
+                    if (geoJsonLayerADA) map.removeLayer(geoJsonLayerADA);
+                    
+                    geoJsonLayerADA = L.geoJSON(data, {
+                        pointToLayer: (feature, latlng) => {
+                            const alerta = feature.properties.Alerta;
+                            const dif = feature.properties.Dif;
+                            
+                            if (dif === 0) {
+                                return L.circleMarker(latlng, {
+                                    radius: 8,
+                                    fillColor: alertColors[alerta] || '#999',
+                                    color: '#333',
+                                    weight: 2,
+                                    opacity: 1,
+                                    fillOpacity: 0.8
+                                });
+                            } else if (dif === 1 || dif === -1) {
+                                const symbol = dif === 1 ? '▲' : '▼';
+                                return L.marker(latlng, {
+                                    icon: L.divIcon({
+                                        html: `<div style="color: ${alertColors[alerta] || '#999'}; font-size: 24px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">` + symbol + `</div>`,
+                                        iconSize: [24, 24],
+                                        className: ''
+                                    })
+                                });
+                            }
+                        },
+                        onEachFeature: (feature, layer) => {
+                            const popup = createPopup(feature, layer, ['Nombre', 'Laguna', 'S2 Fecha', 'S3 Fecha', 'info']);
+                            layer.bindPopup(popup);
+                        }
+                    }).addTo(map);
+                    
+                    updateChart();
+                })
+                .catch(error => console.error('Error cargando ADA:', error));
         }
-        
-        // Cargar GeoJSON
-        function cargarCapas() {
-            if (geoJsonLayerSRH) mapa.removeLayer(geoJsonLayerSRH);
-            if (geoJsonLayerADA) mapa.removeLayer(geoJsonLayerADA);
-            
-            if (capasActivas.SRH) {
-                fetch('mi-capa.geojson')
-                    .then(response => response.json())
-                    .then(data => {
-                        geoJsonLayerSRH = L.geoJSON(data, {
-                            pointToLayer: createCircleMarker,
-                            onEachFeature: onEachFeature
-                        }).addTo(mapa);
-                        actualizarGrafico();
-                    })
-                    .catch(error => console.error('Error cargando SRH:', error));
+
+        // Contar alertas visibles en el viewport actual
+        function countAlertsInView() {
+            const counts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+            const bounds = map.getBounds();
+
+            function countLayer(layer) {
+                if (layer && layer.eachLayer) {
+                    layer.eachLayer(marker => {
+                        if (bounds.contains(marker.getLatLng())) {
+                            const alerta = marker.feature.properties.Alerta;
+                            if (counts.hasOwnProperty(alerta)) {
+                                counts[alerta]++;
+                            }
+                        }
+                    });
+                }
             }
-            
-            if (capasActivas.ADA) {
-                fetch('mi-capa-ada.geojson')
-                    .then(response => response.json())
-                    .then(data => {
-                        geoJsonLayerADA = L.geoJSON(data, {
-                            pointToLayer: createCircleMarker,
-                            onEachFeature: onEachFeature
-                        }).addTo(mapa);
-                        actualizarGrafico();
-                    })
-                    .catch(error => console.error('Error cargando ADA:', error));
+
+            if (document.getElementById('chk-srh').checked) {
+                countLayer(geoJsonLayerSRH);
             }
+            if (document.getElementById('chk-ada').checked) {
+                countLayer(geoJsonLayerADA);
+            }
+
+            return counts;
         }
-        
-        // Contar alertas visibles
-        function contarAlertasVisibles() {
-            const conteos = { 1: 0, 2: 0, 3: 0, 4: 0 };
-            const bounds = mapa.getBounds();
+
+        // Actualizar gráfico de torta
+        function updateChart() {
+            const counts = countAlertsInView();
+            const total = counts[1] + counts[2] + counts[3] + counts[4];
             
-            function contarEnCapa(layer) {
-                if (!layer || !layer.getLayers) return;
-                layer.getLayers().forEach(marker => {
-                    if (bounds.contains(marker.getLatLng())) {
-                        const alerta = marker.feature?.properties?.Alerta;
-                        if (alerta && conteos.hasOwnProperty(alerta)) {
-                            conteos[alerta]++;
+            const ctx = document.getElementById('alertChart').getContext('2d');
+            
+            if (chart) {
+                chart.data.datasets[0].data = [counts[1], counts[2], counts[3], counts[4]];
+                chart.options.plugins.title.text = total > 0 ? `Total: ${total} alertas` : 'Sin alertas en esta vista';
+                chart.update();
+            } else {
+                chart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Verde (1)', 'Amarillo (2)', 'Naranja (3)', 'Rojo (4)'],
+                        datasets: [{
+                            data: [counts[1], counts[2], counts[3], counts[4]],
+                            backgroundColor: ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c'],
+                            borderColor: ['#27ae60', '#f39c12', '#d35400', '#c0392b'],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { font: { size: 12 } }
+                            },
+                            title: {
+                                display: true,
+                                text: total > 0 ? `Total: ${total} alertas` : 'Sin alertas en esta vista',
+                                font: { size: 14, weight: 'bold' }
+                            }
                         }
                     }
                 });
             }
-            
-            contarEnCapa(geoJsonLayerSRH);
-            contarEnCapa(geoJsonLayerADA);
-            
-            return conteos;
         }
-        
-        // Actualizar gráfico de torta
-        function actualizarGrafico() {
-            const conteos = contarAlertasVisibles();
-            const ctx = document.getElementById('pieChart').getContext('2d');
-            
-            if (chartInstance) chartInstance.destroy();
-            
-            chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Verde (1)', 'Amarillo (2)', 'Naranja (3)', 'Rojo (4)'],
-                    datasets: [{
-                        data: [conteos[1], conteos[2], conteos[3], conteos[4]],
-                        backgroundColor: ['#4CAF50', '#FFC107', '#FF9800', '#F44336']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                font: { size: 11 },
-                                padding: 10
-                            }
-                        }
-                    }
-                }
+
+        // Eventos de checkbox
+        document.getElementById('chk-srh').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                loadSRH();
+            } else if (geoJsonLayerSRH) {
+                map.removeLayer(geoJsonLayerSRH);
+                geoJsonLayerSRH = null;
+            }
+            updateChart();
+        });
+
+        document.getElementById('chk-ada').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                loadADA();
+            } else if (geoJsonLayerADA) {
+                map.removeLayer(geoJsonLayerADA);
+                geoJsonLayerADA = null;
+            }
+            updateChart();
+        });
+
+        // Minimizar/Expandir paneles
+        document.querySelectorAll('.panel-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const panel = header.parentElement;
+                panel.classList.toggle('collapsed');
+                const toggle = header.querySelector('.panel-toggle');
+                toggle.textContent = panel.classList.contains('collapsed') ? '+' : '−';
             });
-        }
-        
-        // Event listeners
-        document.getElementById('checkSRH').addEventListener('change', (e) => {
-            capasActivas.SRH = e.target.checked;
-            cargarCapas();
         });
-        
-        document.getElementById('checkADA').addEventListener('change', (e) => {
-            capasActivas.ADA = e.target.checked;
-            cargarCapas();
+
+        // Eventos de zoom y pan para actualizar gráfico
+        map.on('zoomend moveend', () => {
+            updateChart();
         });
-        
-        mapa.on('moveend zoomend', actualizarGrafico);
-        
-        // Cargar capas al iniciar
-        cargarCapas();
+
+        // Cargar capas iniciales
+        loadSRH();
+        loadADA();
     </script>
 </body>
 </html>
