@@ -381,6 +381,7 @@
             srhLayer = L.geoJSON(srhGeoJSON, {
                 pointToLayer: (feature, latlng) => {
                     const alert = feature.properties.Alerta;
+                    if (!alert) return null;
                     const dif = feature.properties.Dif;
                     return createMarker(latlng, alert, dif, 'srh');
                 },
@@ -400,6 +401,7 @@
             adaLayer = L.geoJSON(adaGeoJSON, {
                 pointToLayer: (feature, latlng) => {
                     const alert = feature.properties.Alerta;
+                    if (!alert) return null;
                     const dif = feature.properties.Dif;
                     return createMarker(latlng, alert, dif, 'ada');
                 },
@@ -431,7 +433,10 @@
                 }
             }).addTo(map);
 
+            srhData = srhGeoJSON.features.filter(f => f.properties.Alerta);
+            adaData = adaGeoJSON.features.filter(f => f.properties.Alerta);
             updateDashboard();
+            map.on('zoomend moveend', updateDashboard);
         }).catch(error => console.error('Error cargando GeoJSON:', error));
 
         function createMarker(latlng, alert, dif, type) {
@@ -466,9 +471,30 @@
         }
 
         function updateDashboard() {
+            const bounds = map.getBounds();
             const visibleData = [];
-            if (document.getElementById('srhToggle').checked) visibleData.push(...srhData);
-            if (document.getElementById('adaToggle').checked) visibleData.push(...adaData);
+            
+            if (document.getElementById('srhToggle').checked) {
+                srhData.forEach(feature => {
+                    if (feature.geometry.type === 'Point') {
+                        const latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
+                        if (bounds.contains(latlng)) {
+                            visibleData.push(feature);
+                        }
+                    }
+                });
+            }
+            
+            if (document.getElementById('adaToggle').checked) {
+                adaData.forEach(feature => {
+                    if (feature.geometry.type === 'Point') {
+                        const latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
+                        if (bounds.contains(latlng)) {
+                            visibleData.push(feature);
+                        }
+                    }
+                });
+            }
 
             const counts = { 1: 0, 2: 0, 3: 0, 4: 0 };
             const scorecards = {
@@ -522,12 +548,12 @@
 
         document.getElementById('srhToggle').addEventListener('change', () => {
             if (srhLayer) map[document.getElementById('srhToggle').checked ? 'addLayer' : 'removeLayer'](srhLayer);
-            updateDashboard();
+            setTimeout(updateDashboard, 100);
         });
 
         document.getElementById('adaToggle').addEventListener('change', () => {
             if (adaLayer) map[document.getElementById('adaToggle').checked ? 'addLayer' : 'removeLayer'](adaLayer);
-            updateDashboard();
+            setTimeout(updateDashboard, 100);
         });
 
         document.getElementById('bsasToggle').addEventListener('change', () => {
