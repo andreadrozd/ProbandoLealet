@@ -22,7 +22,7 @@
             top: 0;
             left: 0;
             right: 280px;
-            bottom: 280px;
+            bottom: 45%;
             z-index: 1;
         }
         #chartContainer {
@@ -30,7 +30,7 @@
             bottom: 0;
             left: 0;
             right: 280px;
-            height: 280px;
+            height: 45%;
             background: #ecf0f1;
             border-top: 2px solid #ddd;
             padding: 0;
@@ -68,23 +68,23 @@
             height: 100%;
         }
         #pieChart {
-            flex: 0 0 55%;
+            flex: 0 0 50%;
             min-width: 350px;
         }
         #dashboardContainer {
             flex: 1;
             display: grid;
-            grid-template-columns: repeat(1, 1fr);
-            gap: 12px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
             padding-right: 10px;
         }
         .scorecard {
             color: white;
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
             text-align: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            font-size: 13px;
+            font-size: 11px;
         }
         .scorecard.red {
             background: #c0392b;
@@ -110,13 +110,13 @@
             background: #52be80;
         }
         .scorecard-title {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             opacity: 0.95;
         }
         .scorecard-value {
-            font-size: 28px;
+            font-size: 22px;
             font-weight: bold;
         }
         #rightPanel {
