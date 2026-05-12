@@ -55,7 +55,6 @@
             padding-right: 10px;
         }
         .scorecard {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 15px;
             border-radius: 8px;
@@ -64,18 +63,27 @@
             font-size: 13px;
         }
         .scorecard.red {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: #c0392b;
         }
         .scorecard.orange {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            background: #e67e22;
+        }
+        .scorecard.yellow-dark {
+            background: #d4a017;
         }
         .scorecard.yellow {
-            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            background: #f1c40f;
             color: #333;
         }
-        .scorecard.green {
-            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+        .scorecard.yellow-light {
+            background: #fff9c4;
             color: #333;
+        }
+        .scorecard.green-dark {
+            background: #16a085;
+        }
+        .scorecard.green {
+            background: #52be80;
         }
         .scorecard-title {
             font-size: 12px;
@@ -362,6 +370,7 @@
                 labels: labels,
                 values: values,
                 type: 'pie',
+                hole: 0.4,
                 marker: { colors: colors },
                 textposition: 'inside',
                 textinfo: 'label+percent'
@@ -399,8 +408,8 @@
                 if (alerta === 2 && dif === 0) counts['yellow_stable']++;
                 if (alerta === 2 && dif === 1) counts['yellow_increase']++;
                 if (alerta === 2 && dif === -1) counts['yellow_decrease']++;
-                if (alerta === 1 && dif === 0) counts['green_stable']++;
-                if (alerta === 1 && dif === 1) counts['green_increase']++;
+                if (alerta === 0 && dif === 0) counts['green_stable']++;
+                if (alerta === 0 && dif === 1) counts['green_increase']++;
             });
 
             const scorecards = [
