@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Visor Leaflet</title>
+
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+    <style>
+      #map { height: 100vh; width: 100%; }
+      #chartContainer {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 280px;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        z-index: 400;
+      }
+      #chartCanvas {
+        max-width: 100%;
+      }
+      .title {
+        position: fixed;
+        top: 20px;
+        left: 70px;
+        background: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        z-index: 400;
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+      }
+      .legend {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        z-index: 400;
+      }
+      .legend-section {
+        margin-bottom: 12px;
+      }
+      .legend-title {
+        font-weight: bold;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+      .legend-item {
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+      .legend-color {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+      .legend-symbol {
+        display: inline-block;
+        width: 16px;
+        text-align: center;
+        margin-right: 8px;
+        vertical-align: middle;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
+    <div class="title">Alertas 2025-05-05</div>
+    <div id="chartContainer">
+      <canvas id="chartCanvas"></canvas>
+    </div>
+    <div class="legend">
+      <div class="legend-section">
+        <div class="legend-title">Nivel de Alerta</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #2ecc71;"></span>Alerta 1</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #f1c40f;"></span>Alerta 2</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #e67e22;"></span>Alerta 3</div>
+        <div class="legend-item"><span class="legend-color" style="background-color: #e74c3c;"></span>Alerta 4</div>
+      </div>
+      <div class="legend-section">
+        <div class="legend-title">Tendencia (Dif)</div>
+        <div class="legend-item"><span class="legend-symbol" style="color: #666;">●</span>Estable</div>
+        <div class="legend-item"><span class="legend-symbol" style="color: #666;">▲</span>En aumento</div>
+        <div class="legend-item"><span class="legend-symbol" style="color: #666;">▼</span>En disminución</div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+      const map = L.map("map").setView([-34.6037, -58.3816], 10);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      let allFeatures = [];
+      let chart = null;
+
+      function getColorByAlerta(alerta) {
+        const colors = {
+          1: '#2ecc71',
+          2: '#f1c40f',
+          3: '#e67e22',
+          4: '#e74c3c'
+        };
+        return colors[alerta] || '#95a5a6';
+      }
+
+      function getSymbol(alerta, dif) {
+        const color = getColorByAlerta(alerta);
+        let symbol = '●';
+        if (dif === 1) symbol = '▲';
+        else if (dif === -1) symbol = '▼';
+        return L.divIcon({
+          html: `<div style="color: ${color}; font-size: 24px; font-weight: bold;">${symbol}</div>`,
+          iconSize: [24, 24],
+          className: 'custom-icon'
+        });
+      }
+
+      function updateChart() {
+        const bounds = map.getBounds();
+        const visibleAlerts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+
+        allFeatures.forEach((feature) => {
+          const latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
+          if (bounds.contains(latlng)) {
+            const alerta = feature.properties.Alerta || 1;
+            visibleAlerts[alerta]++;
+          }
+        });
+
+        const ctx = document.getElementById('chartCanvas').getContext('2d');
+        if (chart) chart.destroy();
+        
+        chart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Alerta 1', 'Alerta 2', 'Alerta 3', 'Alerta 4'],
+            datasets: [{
+              data: [visibleAlerts[1], visibleAlerts[2], visibleAlerts[3], visibleAlerts[4]],
+              backgroundColor: ['#2ecc71', '#f1c40f', '#e67e22', '#e74c3c']
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: {
+                position: 'bottom'
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return context.label + ': ' + context.parsed;
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      fetch("mi-capa.geojson")
+        .then((r) => r.json())
+        .then((data) => {
+          allFeatures = data.features;
+          L.geoJSON(data, {
+            pointToLayer: (feature, latlng) => {
+              const alerta = feature.properties.Alerta || 1;
+              const dif = feature.properties.Dif || 0;
+              return L.marker(latlng, { icon: getSymbol(alerta, dif) });
+            },
+            onEachFeature: (feature, layer) => {
+              const props = feature.properties;
+              layer.bindPopup(`
+                <strong>${props.PUNTO}</strong><br>
+                Municipio: ${props.MUNICIPIO}<br>
+                Info: ${props.info}
+              `);
+            }
+          }).addTo(map);
+
+          updateChart();
+          map.on('zoomend moveend', updateChart);
+        })
+        .catch((err) => {
+          console.log("No pude cargar mi-capa.geojson:", err);
+        });
+    </script>
+  </body>
+</html>
