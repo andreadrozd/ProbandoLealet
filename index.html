@@ -68,13 +68,13 @@
             height: 100%;
         }
         #pieChart {
-            flex: 0 0 35%;
-            min-width: 250px;
+            flex: 0 0 55%;
+            min-width: 350px;
         }
         #dashboardContainer {
             flex: 1;
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(1, 1fr);
             gap: 12px;
             padding-right: 10px;
         }
@@ -408,7 +408,7 @@
 
             const layout = {
                 title: { text: 'Distribución de Alertas', font: { size: 14 } },
-                showlegend: true,
+                showlegend: false,
                 margin: { l: 20, r: 20, t: 40, b: 20 },
                 font: { size: 11 }
             };
