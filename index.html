@@ -22,7 +22,7 @@
             top: 0;
             left: 0;
             right: 280px;
-            bottom: 380px;
+            bottom: 280px;
             z-index: 1;
         }
         #chartContainer {
@@ -30,11 +30,36 @@
             bottom: 0;
             left: 0;
             right: 280px;
-            height: 380px;
-            background: white;
+            height: 280px;
+            background: #ecf0f1;
             border-top: 2px solid #ddd;
-            padding: 15px;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #chartContainerHeader {
+            background: #34495e;
+            color: white;
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            user-select: none;
+            font-size: 14px;
+        }
+        #chartContainerHeader:hover {
+            background: #2c3e50;
+        }
+        #chartContentWrapper {
+            flex: 1;
             overflow: auto;
+            padding: 15px;
+        }
+        #chartContentWrapper.hidden {
+            display: none;
         }
         #chartAndDashboard {
             display: flex;
@@ -51,7 +76,6 @@
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 12px;
-            overflow-y: auto;
             padding-right: 10px;
         }
         .scorecard {
@@ -181,9 +205,15 @@
 <body>
     <div id="mapContainer"></div>
     <div id="chartContainer">
-        <div id="chartAndDashboard">
-            <div id="pieChart"></div>
-            <div id="dashboardContainer"></div>
+        <div id="chartContainerHeader" onclick="toggleChartPanel()">
+            <span><b>Distribución de Alertas</b></span>
+            <span class="toggle-btn">−</span>
+        </div>
+        <div id="chartContentWrapper">
+            <div id="chartAndDashboard">
+                <div id="pieChart"></div>
+                <div id="dashboardContainer"></div>
+            </div>
         </div>
     </div>
     <div id="rightPanel">
@@ -437,6 +467,13 @@
             const toggle = header.querySelector('.toggle-btn');
             content.classList.toggle('hidden');
             toggle.textContent = content.classList.contains('hidden') ? '+' : '−';
+        }
+
+        function toggleChartPanel() {
+            const wrapper = document.getElementById('chartContentWrapper');
+            const toggle = document.querySelector('#chartContainerHeader .toggle-btn');
+            wrapper.classList.toggle('hidden');
+            toggle.textContent = wrapper.classList.contains('hidden') ? '+' : '−';
         }
 
         // Load layers
