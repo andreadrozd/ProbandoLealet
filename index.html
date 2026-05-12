@@ -408,17 +408,17 @@
                 if (alerta === 2 && dif === 0) counts['yellow_stable']++;
                 if (alerta === 2 && dif === 1) counts['yellow_increase']++;
                 if (alerta === 2 && dif === -1) counts['yellow_decrease']++;
-                if (alerta === 0 && dif === 0) counts['green_stable']++;
-                if (alerta === 0 && dif === 1) counts['green_increase']++;
+                if (alerta === 1 && dif === 0) counts['green_stable']++;
+                if (alerta === 1 && dif === 1) counts['green_increase']++;
             });
 
             const scorecards = [
                 { title: 'Banderas sanitarias estables', value: counts['red_orange_stable'], class: 'red' },
-                { title: 'Alertas sanitarias en descenso', value: counts['red_orange_decrease'], class: 'red' },
+                { title: 'Alertas sanitarias en descenso', value: counts['red_orange_decrease'], class: 'orange' },
                 { title: 'Alertas amarillas estables', value: counts['yellow_stable'], class: 'yellow' },
-                { title: 'Alertas amarillas en aumento', value: counts['yellow_increase'], class: 'yellow' },
-                { title: 'Alertas amarillas en disminución', value: counts['yellow_decrease'], class: 'yellow' },
-                { title: 'Sin alertas estables', value: counts['green_stable'], class: 'green' },
+                { title: 'Alertas amarillas en aumento', value: counts['yellow_increase'], class: 'yellow-dark' },
+                { title: 'Alertas amarillas en disminución', value: counts['yellow_decrease'], class: 'yellow-light' },
+                { title: 'Sin alertas estables', value: counts['green_stable'], class: 'green-dark' },
                 { title: 'Sin alertas en aumento', value: counts['green_increase'], class: 'green' }
             ];
 
