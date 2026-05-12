@@ -403,7 +403,7 @@
                 const alerta = feature.properties.Alerta || 1;
                 const dif = feature.properties.Dif || 0;
 
-                if ((alerta === 3 || alerta === 4) && dif === 0) counts['red_orange_stable']++;
+                if ((alerta === 3 || alerta === 4) && (dif === 0 || dif === 1)) counts['red_orange_stable']++;
                 if ((alerta === 3 || alerta === 4) && dif === -1) counts['red_orange_decrease']++;
                 if (alerta === 2 && dif === 0) counts['yellow_stable']++;
                 if (alerta === 2 && dif === 1) counts['yellow_increase']++;
