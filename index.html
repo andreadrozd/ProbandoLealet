@@ -78,6 +78,22 @@
         vertical-align: middle;
         font-weight: bold;
       }
+      .layer-control {
+        background: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+      }
+      .layer-control input {
+        margin-right: 8px;
+        cursor: pointer;
+      }
+      .layer-control label {
+        cursor: pointer;
+        user-select: none;
+      }
     </style>
   </head>
 
@@ -114,6 +130,7 @@
 
       let allFeatures = [];
       let chart = null;
+      let geoJsonLayer = null;
 
       function getColorByAlerta(alerta) {
         const colors = {
@@ -180,11 +197,38 @@
         });
       }
 
+      function createLayerControl() {
+        const layerControl = L.Control.extend({
+          onAdd: function(map) {
+            const div = L.DomUtil.create('div', 'layer-control');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = 'layerToggle';
+            checkbox.checked = true;
+            const label = document.createElement('label');
+            label.htmlFor = 'layerToggle';
+            label.textContent = 'Puntos de alerta';
+            checkbox.addEventListener('change', function() {
+              if (this.checked) {
+                map.addLayer(geoJsonLayer);
+              } else {
+                map.removeLayer(geoJsonLayer);
+              }
+              updateChart();
+            });
+            div.appendChild(checkbox);
+            div.appendChild(label);
+            return div;
+          }
+        });
+        new layerControl({ position: 'topleft' }).addTo(map);
+      }
+
       fetch("mi-capa.geojson")
         .then((r) => r.json())
         .then((data) => {
           allFeatures = data.features;
-          L.geoJSON(data, {
+          geoJsonLayer = L.geoJSON(data, {
             pointToLayer: (feature, latlng) => {
               const alerta = feature.properties.Alerta || 1;
               const dif = feature.properties.Dif || 0;
@@ -199,7 +243,7 @@
               `);
             }
           }).addTo(map);
-
+          createLayerControl();
           updateChart();
           map.on('zoomend moveend', updateChart);
         })
