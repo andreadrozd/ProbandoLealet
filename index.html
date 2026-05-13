@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor de Alertas SRH-ADA</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Visor de Alertas - SRH y ADA</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -14,284 +14,477 @@
             box-sizing: border-box;
         }
         body {
-            font-family: Arial, sans-serif;
-            height: 100vh;
-            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
         }
-        #map {
+        #mapContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 280px;
+            bottom: 45%;
+            z-index: 1;
+        }
+        #chartContainer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 280px;
+            height: 45%;
+            background: #ecf0f1;
+            border-top: 2px solid #ddd;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #chartContainerHeader {
+            background: #34495e;
+            color: white;
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            user-select: none;
+            font-size: 14px;
+        }
+        #chartContainerHeader:hover {
+            background: #2c3e50;
+        }
+        #chartContentWrapper {
+            flex: 1;
+            overflow: auto;
+            padding: 15px;
+        }
+        #chartContentWrapper.hidden {
+            display: none;
+        }
+        #chartAndDashboard {
+            display: flex;
+            gap: 20px;
             width: 100%;
             height: 100%;
         }
-        .control-panel {
+        #pieChart {
+            flex: 0 0 50%;
+            min-width: 350px;
+        }
+        #dashboardContainer {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding-right: 10px;
+        }
+        .scorecard {
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-size: 11px;
+        }
+        .scorecard.red {
+            background: #c0392b;
+        }
+        .scorecard.orange {
+            background: #e67e22;
+        }
+        .scorecard.yellow-dark {
+            background: #d4a017;
+        }
+        .scorecard.yellow {
+            background: #f1c40f;
+            color: #333;
+        }
+        .scorecard.yellow-light {
+            background: #fff9c4;
+            color: #333;
+        }
+        .scorecard.green-dark {
+            background: #16a085;
+        }
+        .scorecard.green {
+            background: #52be80;
+        }
+        .scorecard-title {
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            opacity: 0.95;
+        }
+        .scorecard-value {
+            font-size: 22px;
+            font-weight: bold;
+        }
+        #rightPanel {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: white;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-            z-index: 400;
+            top: 0;
+            right: 0;
             width: 280px;
-            max-height: 70vh;
+            bottom: 0;
+            background: white;
+            border-left: 2px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+            z-index: 2;
+        }
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            background: #2c3e50;
+            color: white;
+            padding: 10px;
+            margin: -15px -15px 15px -15px;
+            text-align: center;
+        }
+        .collapsible-section {
+            margin-bottom: 20px;
+        }
+        .section-header {
+            background: #34495e;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            user-select: none;
+        }
+        .section-header:hover {
+            background: #2c3e50;
+        }
+        .section-content {
+            background: #ecf0f1;
+            padding: 10px;
+            border-radius: 0 0 4px 4px;
+            max-height: 500px;
             overflow-y: auto;
         }
-        .control-panel h3 {
-            margin-bottom: 10px;
-            font-size: 14px;
+        .section-content.hidden {
+            max-height: 0;
+            overflow: hidden;
+            padding: 0;
         }
-        .control-panel label {
-            display: block;
-            margin: 8px 0;
-            font-size: 12px;
+        .toggle-btn {
+            font-size: 16px;
             cursor: pointer;
         }
-        .control-panel input[type="checkbox"] {
-            margin-right: 5px;
-        }
-        #chartContainer {
-            padding: 10px;
-            margin-bottom: 10px;
-            border-top: 1px solid #ddd;
-            border-bottom: 1px solid #ddd;
-        }
-        #chartContainer canvas {
-            max-height: 250px;
-        }
-        #legend {
-            padding: 10px;
+        .legend-item {
+            margin-bottom: 8px;
             font-size: 12px;
-            margin-top: 10px;
         }
-        #legend p {
-            margin: 5px 0;
-            line-height: 1.4;
+        .legend-color {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .checkbox-group {
+            margin-bottom: 10px;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .checkbox-group input {
+            margin-right: 8px;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    <div class="control-panel">
-        <h3><strong>Alertas 2025-05-05</strong></h3>
+    <div id="mapContainer"></div>
+    <div id="chartContainer">
+        <div id="chartContainerHeader" onclick="toggleChartPanel()">
+            <span><b>Distribución de Alertas</b></span>
+            <span class="toggle-btn">−</span>
+        </div>
+        <div id="chartContentWrapper">
+            <div id="chartAndDashboard">
+                <div id="pieChart"></div>
+                <div id="dashboardContainer"></div>
+            </div>
+        </div>
+    </div>
+    <div id="rightPanel">
+        <div class="panel-title">Alertas Cianobacterias 2025-05-06</div>
         
-        <h4 style="margin-top: 10px; font-size: 12px;">Capas activas</h4>
-        <label><input type="checkbox" id="toggleSRH" checked> SRH</label>
-        <label><input type="checkbox" id="toggleADA" checked> ADA</label>
-        <label><input type="checkbox" id="toggleBsAs" checked> BsAs</label>
-        
-        <div id="chartContainer" style="display: none;">
-            <canvas id="alertChart"></canvas>
+        <!-- Capas Activas -->
+        <div class="collapsible-section">
+            <div class="section-header" onclick="toggleSection(this)">
+                <span>Capas activas</span>
+                <span class="toggle-btn">−</span>
+            </div>
+            <div class="section-content">
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="srh-toggle" checked onchange="updateMap()">
+                        SRH
+                    </label>
+                </div>
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="ada-toggle" checked onchange="updateMap()">
+                        ADA
+                    </label>
+                </div>
+            </div>
         </div>
         
-        <div id="legend">
-            <strong>Leyenda:</strong>
-            <div style="margin-top: 5px;">
-                <p><strong>Niveles de Alerta:</strong></p>
-                <p>🟢 Alerta 1 (Verde) - Sin alerta</p>
-                <p>🟡 Alerta 2 (Amarillo) - Amarilla</p>
-                <p>🟠 Alerta 3 (Naranja) - Naranja</p>
-                <p>🔴 Alerta 4 (Rojo) - Roja</p>
-                <p style="margin-top: 10px;"><strong>Variación:</strong></p>
-                <p>● Círculo - Estable</p>
-                <p>↑ Flecha arriba - En aumento</p>
-                <p>↓ Flecha abajo - En disminución</p>
+        <!-- Leyenda -->
+        <div class="collapsible-section">
+            <div class="section-header" onclick="toggleSection(this)">
+                <span>Leyenda</span>
+                <span class="toggle-btn">−</span>
+            </div>
+            <div class="section-content">
+                <div><strong>Nivel de Alerta</strong></div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #28a745;"></span>
+                    <span>Alerta 1 (Verde)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #ffc107;"></span>
+                    <span>Alerta 2 (Amarillo)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #ff9800;"></span>
+                    <span>Alerta 3 (Naranja)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #dc3545;"></span>
+                    <span>Alerta 4 (Rojo)</span>
+                </div>
+                <div style="margin-top: 12px;"><strong>Variación</strong></div>
+                <div class="legend-item">● Círculo = Estable</div>
+                <div class="legend-item">▲ Flecha arriba = En aumento</div>
+                <div class="legend-item">▼ Flecha abajo = En disminución</div>
             </div>
         </div>
     </div>
 
     <script>
-        const map = L.map('map').setView([-34.6, -58.4], 10);
+        // Initialize map
+        const map = L.map('mapContainer').setView([-34.6037, -58.3816], 10);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
 
-        let srhLayer, adaLayer, bsasLayer;
-        let srhData = [], adaData = [];
-        let chart = null;
+        let geoJsonLayers = {};
+        const layerNames = ['mi-capa', 'mi-capa-ada'];
+        const layerDisplayNames = { 'mi-capa': 'SRH', 'mi-capa-ada': 'ADA' };
+        const layerToggles = { 'mi-capa': 'srh-toggle', 'mi-capa-ada': 'ada-toggle' };
+
+        // Fields to display for each layer
+        const layerFields = {
+            'mi-capa': ['MUNICIPIO', 'PUNTO', 'S2 Fecha', 'S3 Fecha', 'info'],
+            'mi-capa-ada': ['Nombre', 'Laguna', 'S2 Fecha', 'S3 Fecha', 'info']
+        };
+
+        // Color mapping for alerts
+        const alertColors = {
+            1: '#28a745',
+            2: '#ffc107',
+            3: '#ff9800',
+            4: '#dc3545'
+        };
+
+        function getSymbol(dif) {
+            if (dif === 0) return '●';
+            if (dif === 1) return '▲';
+            if (dif === -1) return '▼';
+            return '●';
+        }
+
+        function createMarker(feature, latlng, layerName) {
+            const alerta = feature.properties.Alerta || 1;
+            const dif = feature.properties.Dif || 0;
+            const color = alertColors[alerta] || '#28a745';
+            const symbol = getSymbol(dif);
+
+            const html = `
+                <div style="font-size: 24px; color: ${color}; text-shadow: 0 0 3px white;">${symbol}</div>
+            `;
+
+            const marker = L.marker(latlng, {
+                icon: L.divIcon({
+                    html: html,
+                    iconSize: [30, 30],
+                    className: ''
+                })
+            });
+
+            // Popup with specific fields
+            const fields = layerFields[layerName];
+            let popupContent = `<div style="font-size: 12px; font-weight: bold; margin-bottom: 8px;">${layerDisplayNames[layerName]}</div>`;
+            fields.forEach(field => {
+                const value = feature.properties[field] || '-';
+                popupContent += `<div><strong>${field}:</strong> ${value}</div>`;
+            });
+
+            marker.bindPopup(popupContent);
+            return marker;
+        }
+
+        function loadGeoJsonLayer(layerName) {
+            return fetch(`${layerName}.geojson`)
+                .then(res => res.json())
+                .then(data => {
+                    const featureGroup = L.featureGroup();
+                    data.features.forEach(feature => {
+                        const marker = createMarker(feature, 
+                            [feature.geometry.coordinates[1], feature.geometry.coordinates[0]], 
+                            layerName);
+                        featureGroup.addLayer(marker);
+                    });
+                    geoJsonLayers[layerName] = { data: data, featureGroup: featureGroup };
+                    featureGroup.addTo(map);
+                });
+        }
+
+        function updateMap() {
+            // Update layer visibility
+            Object.keys(geoJsonLayers).forEach(layerName => {
+                const toggleId = layerToggles[layerName];
+                const isVisible = document.getElementById(toggleId).checked;
+                if (isVisible) {
+                    map.addLayer(geoJsonLayers[layerName].featureGroup);
+                } else {
+                    map.removeLayer(geoJsonLayers[layerName].featureGroup);
+                }
+            });
+            updateChart();
+            updateDashboard();
+        }
+
+        function getVisibleFeatures() {
+            const visibleFeatures = [];
+            Object.keys(geoJsonLayers).forEach(layerName => {
+                const toggleId = layerToggles[layerName];
+                if (!document.getElementById(toggleId).checked) return;
+                
+                geoJsonLayers[layerName].data.features.forEach(feature => {
+                    const latlng = [feature.geometry.coordinates[1], feature.geometry.coordinates[0]];
+                    if (map.getBounds().contains(latlng)) {
+                        visibleFeatures.push({ feature: feature, layer: layerName });
+                    }
+                });
+            });
+            return visibleFeatures;
+        }
 
         function updateChart() {
-            const visibleAlerts = {};
-            const bounds = map.getBounds();
-            let hasData = false;
-            
-            // Contar alertas de SRH
-            if (document.getElementById('toggleSRH').checked) {
-                srhData.forEach(feature => {
-                    if (feature.properties.Alerta) {
-                        const latLng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
-                        if (bounds.contains(latLng)) {
-                            visibleAlerts[feature.properties.Alerta] = (visibleAlerts[feature.properties.Alerta] || 0) + 1;
-                            hasData = true;
-                        }
-                    }
-                });
-            }
-            
-            // Contar alertas de ADA
-            if (document.getElementById('toggleADA').checked) {
-                adaData.forEach(feature => {
-                    if (feature.properties.Alerta) {
-                        const latLng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
-                        if (bounds.contains(latLng)) {
-                            visibleAlerts[feature.properties.Alerta] = (visibleAlerts[feature.properties.Alerta] || 0) + 1;
-                            hasData = true;
-                        }
-                    }
-                });
-            }
-            
-            const chartContainer = document.getElementById('chartContainer');
-            if (!hasData) {
-                chartContainer.style.display = 'none';
-                if (chart) {
-                    chart.destroy();
-                    chart = null;
-                }
-                return;
-            }
-            
-            chartContainer.style.display = 'block';
-            
-            const alertLabels = ['Sin alerta (1)', 'Amarilla (2)', 'Naranja (3)', 'Roja (4)'];
-            const data = [visibleAlerts[1] || 0, visibleAlerts[2] || 0, visibleAlerts[3] || 0, visibleAlerts[4] || 0];
-            const colors = ['#2d5016', '#ffeb3b', '#ff9800', '#c41c3b'];
-            
-            if (chart) {
-                chart.destroy();
-            }
-            
-            const ctx = document.getElementById('alertChart');
-            if (ctx) {
-                chart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: alertLabels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: colors,
-                            borderColor: '#fff',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'bottom'
-                            }
-                        }
-                    }
-                });
-            }
+            const visibleFeatures = getVisibleFeatures();
+            const alertCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+            visibleFeatures.forEach(({ feature }) => {
+                const alerta = feature.properties.Alerta || 1;
+                alertCounts[alerta]++;
+            });
+
+            const labels = ['Alerta 1', 'Alerta 2', 'Alerta 3', 'Alerta 4'];
+            const values = [alertCounts[1], alertCounts[2], alertCounts[3], alertCounts[4]];
+            const colors = ['#28a745', '#ffc107', '#ff9800', '#dc3545'];
+
+            const data = [{
+                labels: labels,
+                values: values,
+                type: 'pie',
+                hole: 0.4,
+                marker: { colors: colors },
+                textposition: 'inside',
+                textinfo: 'label+percent'
+            }];
+
+            const layout = {
+                title: { text: 'Distribución de Alertas', font: { size: 14 } },
+                showlegend: false,
+                margin: { l: 20, r: 20, t: 40, b: 20 },
+                font: { size: 11 }
+            };
+
+            Plotly.newPlot('pieChart', data, layout, { responsive: true });
         }
 
-        map.on('moveend', updateChart);
-        map.on('zoomend', updateChart);
-        
-        document.getElementById('toggleSRH').addEventListener('change', () => {
-            srhLayer.setStyle({display: document.getElementById('toggleSRH').checked ? 'block' : 'none'});
-            updateChart();
-        });
-        
-        document.getElementById('toggleADA').addEventListener('change', () => {
-            adaLayer.setStyle({display: document.getElementById('toggleADA').checked ? 'block' : 'none'});
-            updateChart();
-        });
-        
-        document.getElementById('toggleBsAs').addEventListener('change', () => {
-            bsasLayer.setStyle({display: document.getElementById('toggleBsAs').checked ? 'block' : 'none'});
-        });
+        function updateDashboard() {
+            const visibleFeatures = getVisibleFeatures();
+            
+            const counts = {
+                'red_orange_stable': 0,
+                'red_orange_decrease': 0,
+                'yellow_stable': 0,
+                'yellow_increase': 0,
+                'yellow_decrease': 0,
+                'green_stable': 0,
+                'green_increase': 0
+            };
 
-        function addGeoJsonLayer(data, layerName) {
-            const features = [];
-            data.features.forEach(feature => {
-                // Solo agregar features con Alerta
-                if (feature.properties.Alerta) {
-                    features.push(feature);
-                }
+            visibleFeatures.forEach(({ feature }) => {
+                const alerta = feature.properties.Alerta || 1;
+                const dif = feature.properties.Dif || 0;
+
+                if ((alerta === 3 || alerta === 4) && (dif === 0 || dif === 1)) counts['red_orange_stable']++;
+                if ((alerta === 3 || alerta === 4) && dif === -1) counts['red_orange_decrease']++;
+                if (alerta === 2 && dif === 0) counts['yellow_stable']++;
+                if (alerta === 2 && dif === 1) counts['yellow_increase']++;
+                if (alerta === 2 && dif === -1) counts['yellow_decrease']++;
+                if (alerta === 1 && dif === 0) counts['green_stable']++;
+                if (alerta === 1 && dif === 1) counts['green_increase']++;
             });
-            
-            const layer = L.geoJSON({type: 'FeatureCollection', features: features}, {
-                pointToLayer: (feature, latlng) => {
-                    const alerta = feature.properties.Alerta;
-                    const dif = feature.properties.Dif;
-                    const colors = {1: '#2d5016', 2: '#ffeb3b', 3: '#ff9800', 4: '#c41c3b'};
-                    
-                    let marker;
-                    if (dif === 1) {
-                        marker = L.marker(latlng, {
-                            icon: L.divIcon({
-                                html: '<div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 10px solid ' + colors[alerta] + ';"></div>',
-                                iconSize: [10, 10],
-                                className: ''
-                            })
-                        });
-                    } else if (dif === -1) {
-                        marker = L.marker(latlng, {
-                            icon: L.divIcon({
-                                html: '<div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 10px solid ' + colors[alerta] + ';"></div>',
-                                iconSize: [10, 10],
-                                className: ''
-                            })
-                        });
-                    } else {
-                        marker = L.circleMarker(latlng, {
-                            radius: 5,
-                            fillColor: colors[alerta],
-                            color: colors[alerta],
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.8
-                        });
-                    }
-                    
-                    let popupContent = '<strong>' + layerName + '</strong><br>';
-                    Object.keys(feature.properties).forEach(key => {
-                        popupContent += '<b>' + key + ':</b> ' + feature.properties[key] + '<br>';
-                    });
-                    marker.bindPopup(popupContent);
-                    return marker;
-                }
-            }).addTo(map);
-            
-            return layer;
+
+            const scorecards = [
+                { title: 'Banderas sanitarias estables', value: counts['red_orange_stable'], class: 'red' },
+                { title: 'Alertas sanitarias en descenso', value: counts['red_orange_decrease'], class: 'orange' },
+                { title: 'Alertas amarillas estables', value: counts['yellow_stable'], class: 'yellow' },
+                { title: 'Alertas amarillas en aumento', value: counts['yellow_increase'], class: 'yellow-dark' },
+                { title: 'Alertas amarillas en disminución', value: counts['yellow_decrease'], class: 'yellow-light' },
+                { title: 'Sin alertas estables', value: counts['green_stable'], class: 'green-dark' },
+                { title: 'Sin alertas en aumento', value: counts['green_increase'], class: 'green' }
+            ];
+
+            const dashboardHtml = scorecards.map(card => `
+                <div class="scorecard ${card.class}">
+                    <div class="scorecard-title">${card.title}</div>
+                    <div class="scorecard-value">${card.value}</div>
+                </div>
+            `).join('');
+
+            document.getElementById('dashboardContainer').innerHTML = dashboardHtml;
         }
 
-        fetch('./mi-capa.geojson')
-            .then(response => response.json())
-            .then(data => {
-                srhData = data.features;
-                srhLayer = addGeoJsonLayer(data, 'SRH');
-                updateChart();
-            });
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            const toggle = header.querySelector('.toggle-btn');
+            content.classList.toggle('hidden');
+            toggle.textContent = content.classList.contains('hidden') ? '+' : '−';
+        }
 
-        fetch('./mi-capa-ada.geojson')
-            .then(response => response.json())
-            .then(data => {
-                adaData = data.features;
-                adaLayer = addGeoJsonLayer(data, 'ADA');
+        function toggleChartPanel() {
+            const wrapper = document.getElementById('chartContentWrapper');
+            const toggle = document.querySelector('#chartContainerHeader .toggle-btn');
+            wrapper.classList.toggle('hidden');
+            toggle.textContent = wrapper.classList.contains('hidden') ? '+' : '−';
+        }
+
+        // Load layers
+        Promise.all(layerNames.map(loadGeoJsonLayer)).then(() => {
+            updateChart();
+            updateDashboard();
+            map.on('zoomend panend', () => {
                 updateChart();
+                updateDashboard();
             });
-        
-        fetch('./BsAs.geojson')
-            .then(response => response.json())
-            .then(data => {
-                bsasLayer = L.geoJSON(data, {
-                    style: {
-                        color: '#999',
-                        weight: 0.5,
-                        dashArray: '5, 5',
-                        fillOpacity: 0
-                    },
-                    onEachFeature: (feature, layer) => {
-                        if (feature.properties.Municipio) {
-                            layer.bindPopup('<strong>' + feature.properties.Municipio + '</strong>');
-                        }
-                    }
-                }).addTo(map);
-            }).catch(err => console.log('BsAs layer not found:', err));
+        });
     </script>
 <script>window.parent.postMessage({ action: "ready" }, "*"); 
  
