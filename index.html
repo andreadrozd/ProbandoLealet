@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor de Alertas SRH-ADA</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        .control-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            z-index: 400;
+            width: 280px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .control-panel h3 {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .control-panel label {
+            display: block;
+            margin: 8px 0;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .control-panel input[type="checkbox"] {
+            margin-right: 5px;
+        }
+        #chartContainer {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-top: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+        }
+        #chartContainer canvas {
+            max-height: 250px;
+        }
+        #legend {
+            padding: 10px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        #legend p {
+            margin: 5px 0;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="control-panel">
+        <h3><strong>Alertas 2025-05-05</strong></h3>
+        
+        <h4 style="margin-top: 10px; font-size: 12px;">Capas activas</h4>
+        <label><input type="checkbox" id="toggleSRH" checked> SRH</label>
+        <label><input type="checkbox" id="toggleADA" checked> ADA</label>
+        <label><input type="checkbox" id="toggleBsAs" checked> BsAs</label>
+        
+        <div id="chartContainer" style="display: none;">
+            <canvas id="alertChart"></canvas>
+        </div>
+        
+        <div id="legend">
+            <strong>Leyenda:</strong>
+            <div style="margin-top: 5px;">
+                <p><strong>Niveles de Alerta:</strong></p>
+                <p>🟢 Alerta 1 (Verde) - Sin alerta</p>
+                <p>🟡 Alerta 2 (Amarillo) - Amarilla</p>
+                <p>🟠 Alerta 3 (Naranja) - Naranja</p>
+                <p>🔴 Alerta 4 (Rojo) - Roja</p>
+                <p style="margin-top: 10px;"><strong>Variación:</strong></p>
+                <p>● Círculo - Estable</p>
+                <p>↑ Flecha arriba - En aumento</p>
+                <p>↓ Flecha abajo - En disminución</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const map = L.map('map').setView([-34.6, -58.4], 10);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        let srhLayer, adaLayer, bsasLayer;
+        let srhData = [], adaData = [];
+        let chart = null;
+
+        function updateChart() {
+            const visibleAlerts = {};
+            const bounds = map.getBounds();
+            let hasData = false;
+            
+            // Contar alertas de SRH
+            if (document.getElementById('toggleSRH').checked) {
+                srhData.forEach(feature => {
+                    if (feature.properties.Alerta) {
+                        const latLng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
+                        if (bounds.contains(latLng)) {
+                            visibleAlerts[feature.properties.Alerta] = (visibleAlerts[feature.properties.Alerta] || 0) + 1;
+                            hasData = true;
+                        }
+                    }
+                });
+            }
+            
+            // Contar alertas de ADA
+            if (document.getElementById('toggleADA').checked) {
+                adaData.forEach(feature => {
+                    if (feature.properties.Alerta) {
+                        const latLng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0]);
+                        if (bounds.contains(latLng)) {
+                            visibleAlerts[feature.properties.Alerta] = (visibleAlerts[feature.properties.Alerta] || 0) + 1;
+                            hasData = true;
+                        }
+                    }
+                });
+            }
+            
+            const chartContainer = document.getElementById('chartContainer');
+            if (!hasData) {
+                chartContainer.style.display = 'none';
+                if (chart) {
+                    chart.destroy();
+                    chart = null;
+                }
+                return;
+            }
+            
+            chartContainer.style.display = 'block';
+            
+            const alertLabels = ['Sin alerta (1)', 'Amarilla (2)', 'Naranja (3)', 'Roja (4)'];
+            const data = [visibleAlerts[1] || 0, visibleAlerts[2] || 0, visibleAlerts[3] || 0, visibleAlerts[4] || 0];
+            const colors = ['#2d5016', '#ffeb3b', '#ff9800', '#c41c3b'];
+            
+            if (chart) {
+                chart.destroy();
+            }
+            
+            const ctx = document.getElementById('alertChart');
+            if (ctx) {
+                chart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: alertLabels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors,
+                            borderColor: '#fff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        map.on('moveend', updateChart);
+        map.on('zoomend', updateChart);
+        
+        document.getElementById('toggleSRH').addEventListener('change', () => {
+            srhLayer.setStyle({display: document.getElementById('toggleSRH').checked ? 'block' : 'none'});
+            updateChart();
+        });
+        
+        document.getElementById('toggleADA').addEventListener('change', () => {
+            adaLayer.setStyle({display: document.getElementById('toggleADA').checked ? 'block' : 'none'});
+            updateChart();
+        });
+        
+        document.getElementById('toggleBsAs').addEventListener('change', () => {
+            bsasLayer.setStyle({display: document.getElementById('toggleBsAs').checked ? 'block' : 'none'});
+        });
+
+        function addGeoJsonLayer(data, layerName) {
+            const features = [];
+            data.features.forEach(feature => {
+                // Solo agregar features con Alerta
+                if (feature.properties.Alerta) {
+                    features.push(feature);
+                }
+            });
+            
+            const layer = L.geoJSON({type: 'FeatureCollection', features: features}, {
+                pointToLayer: (feature, latlng) => {
+                    const alerta = feature.properties.Alerta;
+                    const dif = feature.properties.Dif;
+                    const colors = {1: '#2d5016', 2: '#ffeb3b', 3: '#ff9800', 4: '#c41c3b'};
+                    
+                    let marker;
+                    if (dif === 1) {
+                        marker = L.marker(latlng, {
+                            icon: L.divIcon({
+                                html: '<div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 10px solid ' + colors[alerta] + ';"></div>',
+                                iconSize: [10, 10],
+                                className: ''
+                            })
+                        });
+                    } else if (dif === -1) {
+                        marker = L.marker(latlng, {
+                            icon: L.divIcon({
+                                html: '<div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 10px solid ' + colors[alerta] + ';"></div>',
+                                iconSize: [10, 10],
+                                className: ''
+                            })
+                        });
+                    } else {
+                        marker = L.circleMarker(latlng, {
+                            radius: 5,
+                            fillColor: colors[alerta],
+                            color: colors[alerta],
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+                    }
+                    
+                    let popupContent = '<strong>' + layerName + '</strong><br>';
+                    Object.keys(feature.properties).forEach(key => {
+                        popupContent += '<b>' + key + ':</b> ' + feature.properties[key] + '<br>';
+                    });
+                    marker.bindPopup(popupContent);
+                    return marker;
+                }
+            }).addTo(map);
+            
+            return layer;
+        }
+
+        fetch('./mi-capa.geojson')
+            .then(response => response.json())
+            .then(data => {
+                srhData = data.features;
+                srhLayer = addGeoJsonLayer(data, 'SRH');
+                updateChart();
+            });
+
+        fetch('./mi-capa-ada.geojson')
+            .then(response => response.json())
+            .then(data => {
+                adaData = data.features;
+                adaLayer = addGeoJsonLayer(data, 'ADA');
+                updateChart();
+            });
+        
+        fetch('./BsAs.geojson')
+            .then(response => response.json())
+            .then(data => {
+                bsasLayer = L.geoJSON(data, {
+                    style: {
+                        color: '#999',
+                        weight: 0.5,
+                        dashArray: '5, 5',
+                        fillOpacity: 0
+                    },
+                    onEachFeature: (feature, layer) => {
+                        if (feature.properties.Municipio) {
+                            layer.bindPopup('<strong>' + feature.properties.Municipio + '</strong>');
+                        }
+                    }
+                }).addTo(map);
+            }).catch(err => console.log('BsAs layer not found:', err));
+    </script>
+<script>window.parent.postMessage({ action: "ready" }, "*"); 
+ 
+window.console = new Proxy(console, {
+  get(target, prop) {
+    if (['log', 'warn', 'error'].includes(prop)) {
+      return new Proxy(target[prop], {
+        apply(fn, thisArg, args) {
+          fn.apply(thisArg, args);
+          window.parent.postMessage({ action: 'console', 
+            type: prop, 
+            args: args.map((arg) => {
+              try {
+                return JSON.stringify(arg).replace(/^["']|["']$/g, '');
+              } catch (e) {
+                return arg;
+              }
+            }) 
+          }, '*');
+        }
+      });
+    }
+    return target[prop];
+  }
+});
+</script></body>
+</html>
