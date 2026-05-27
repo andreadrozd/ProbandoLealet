@@ -448,8 +448,8 @@
                         text-align: center;
                         font-size: 15px;
                         font-weight: 700;
-                        color: #e67e22;
-                        background: #fef9f0;
+                        color: #1a5276;
+                        background: #e8f4fc;
                         border-radius: 0;
                         padding: 4px 10px 8px;
                         margin-bottom: 8px;
@@ -457,8 +457,30 @@
                     ">${pointName}</div>
             `;
             fields.forEach(field => {
-                if (field === pointNameField) return; // evitar duplicar el nombre
-                const value = feature.properties[field] || '-';
+                if (field === pointNameField) return;
+                let value = feature.properties[field] || '-';
+
+                if (field === 'info' && value !== '-') {
+                    const alertStyles = {
+                        'alerta verde':    { bg: '#1e7e34', color: '#ffffff' },
+                        'alerta amarillo': { bg: '#d4a017', color: '#ffffff' },
+                        'alerta naranja':  { bg: '#d35400', color: '#ffffff' },
+                        'alerta roja':     { bg: '#c0392b', color: '#ffffff' }
+                    };
+                    const commaIdx = value.indexOf(',');
+                    let prefix = commaIdx !== -1 ? value.substring(0, commaIdx) : value;
+                    let rest   = commaIdx !== -1 ? value.substring(commaIdx) : '';
+                    const prefixLower = prefix.toLowerCase().trim();
+                    let matched = null;
+                    for (const key of Object.keys(alertStyles)) {
+                        if (prefixLower.includes(key)) { matched = key; break; }
+                    }
+                    if (matched) {
+                        const s = alertStyles[matched];
+                        value = `<span style="display:inline-block;background:${s.bg};color:${s.color};font-weight:700;padding:1px 7px;border-radius:4px;border:1px solid rgba(0,0,0,0.15);">${prefix}</span>${rest}`;
+                    }
+                }
+
                 popupContent += `<div style="padding: 2px 4px;"><strong>${field}:</strong> ${value}</div>`;
             });
             popupContent += '</div>';
