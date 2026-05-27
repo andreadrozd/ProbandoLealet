@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor de Alertas - SRH y ADA</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            grid-template-rows: 55% 45%;
+            height: 100vh;
+            gap: 0;
+        }
+        /* RESPONSIVO: CELULAR */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr auto;
+                gap: 0;
+            }
+            #mapContainer {
+                height: 50vh !important;
+                position: relative !important;
+                top: auto !important;
+                right: auto !important;
+                bottom: auto !important;
+                left: auto !important;
+                order: 2;
+            }
+            #chartContainer {
+                height: auto !important;
+                position: relative !important;
+                bottom: auto !important;
+                right: auto !important;
+                left: auto !important;
+                order: 3;
+                min-height: 300px;
+            }
+            #rightPanel {
+                position: relative !important;
+                top: auto !important;
+                right: auto !important;
+                width: 100% !important;
+                height: auto !important;
+                bottom: auto !important;
+                border-left: none !important;
+                border-bottom: 2px solid #ddd;
+                max-height: 250px;
+                order: 1;
+            }
+            #chartAndDashboard {
+                flex-direction: column !important;
+            }
+            #pieChart {
+                flex: 0 0 200px !important;
+                min-width: 100% !important;
+            }
+            #dashboardContainer {
+                grid-template-columns: 1fr !important;
+                padding-right: 0 !important;
+            }
+        }
+        /* RESPONSIVO: TABLETA */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .container {
+                grid-template-columns: 1fr 250px;
+            }
+            #rightPanel {
+                width: 250px !important;
+            }
+        }
+        /* COMPUTADORA */
+        @media (min-width: 1025px) {
+            .container {
+                grid-template-columns: 1fr 280px;
+            }
+        }
+        #mapContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 280px;
+            bottom: 45%;
+            z-index: 1;
+        }
+        #chartContainer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 280px;
+            height: 45%;
+            background: #ecf0f1;
+            border-top: 2px solid #ddd;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            z-index: 1;
+        }
+        #chartContainerHeader {
+            background: #34495e;
+            color: white;
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            user-select: none;
+            font-size: 14px;
+        }
+        #chartContainerHeader:hover {
+            background: #2c3e50;
+        }
+        #chartContentWrapper {
+            flex: 1;
+            overflow: auto;
+            padding: 15px;
+        }
+        #chartContentWrapper.hidden {
+            display: none;
+        }
+        #chartAndDashboard {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            height: 100%;
+        }
+        #pieChart {
+            flex: 0 0 50%;
+            min-width: 350px;
+        }
+        #dashboardContainer {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            padding-right: 10px;
+        }
+        .scorecard {
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-size: 11px;
+            transition: transform 0.2s;
+        }
+        .scorecard:hover {
+            transform: translateY(-2px);
+        }
+        .scorecard.red {
+            background: #c0392b;
+        }
+        .scorecard.orange {
+            background: #e67e22;
+        }
+        .scorecard.yellow-dark {
+            background: #d4a017;
+        }
+        .scorecard.yellow {
+            background: #f1c40f;
+            color: #333;
+        }
+        .scorecard.yellow-light {
+            background: #fff9c4;
+            color: #333;
+        }
+        .scorecard.green-dark {
+            background: #16a085;
+        }
+        .scorecard.green {
+            background: #52be80;
+        }
+        .scorecard-title {
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            opacity: 0.95;
+        }
+        .scorecard-value {
+            font-size: 22px;
+            font-weight: bold;
+        }
+        .scorecard-subtitle {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+        #rightPanel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 280px;
+            bottom: 0;
+            background: white;
+            border-left: 2px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+            z-index: 2;
+        }
+        .panel-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            background: #2c3e50;
+            color: white;
+            padding: 10px;
+            margin: -15px -15px 15px -15px;
+            text-align: center;
+            border-radius: 4px 4px 0 0;
+        }
+        .collapsible-section {
+            margin-bottom: 20px;
+        }
+        .section-header {
+            background: #34495e;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            user-select: none;
+            font-size: 13px;
+        }
+        .section-header:hover {
+            background: #2c3e50;
+        }
+        .section-content {
+            background: #ecf0f1;
+            padding: 10px;
+            border-radius: 0 0 4px 4px;
+            max-height: 500px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+        .section-content.hidden {
+            max-height: 0;
+            overflow: hidden;
+            padding: 0;
+        }
+        .toggle-btn {
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .legend-item {
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        .legend-color {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .checkbox-group {
+            margin-bottom: 10px;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .checkbox-group input {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        .layer-stats {
+            font-size: 12px;
+            margin-top: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #34495e;
+        }
+    </style>
+</head>
+<body>
+    <div id="mapContainer"></div>
+    <div id="chartContainer">
+        <div id="chartContainerHeader" onclick="toggleChartPanel()">
+            <span><b>Distribución de Alertas</b></span>
+            <span class="toggle-btn">−</span>
+        </div>
+        <div id="chartContentWrapper">
+            <div id="chartAndDashboard">
+                <div id="pieChart"></div>
+                <div id="dashboardContainer"></div>
+            </div>
+        </div>
+    </div>
+    <div id="rightPanel">
+        <div class="panel-title">Alertas 2026-05-06</div>
+        
+        <!-- Capas Activas -->
+        <div class="collapsible-section">
+            <div class="section-header" onclick="toggleSection(this)">
+                <span>Capas activas</span>
+                <span class="toggle-btn">−</span>
+            </div>
+            <div class="section-content">
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="srh-toggle" checked onchange="updateMap()">
+                        SRH
+                    </label>
+                </div>
+                <div id="srh-stats" class="layer-stats">Puntos: 0</div>
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="ada-toggle" checked onchange="updateMap()">
+                        ADA
+                    </label>
+                </div>
+                <div id="ada-stats" class="layer-stats">Puntos: 0</div>
+            </div>
+        </div>
+        
+        <!-- Leyenda -->
+        <div class="collapsible-section">
+            <div class="section-header" onclick="toggleSection(this)">
+                <span>Leyenda</span>
+                <span class="toggle-btn">−</span>
+            </div>
+            <div class="section-content">
+                <div><strong>Nivel de Alerta</strong></div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #28a745;"></span>
+                    <span>Alerta 1 (Verde)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #ffc107;"></span>
+                    <span>Alerta 2 (Amarillo)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #ff9800;"></span>
+                    <span>Alerta 3 (Naranja)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background: #dc3545;"></span>
+                    <span>Alerta 4 (Rojo)</span>
+                </div>
+                <div style="margin-top: 12px;"><strong>Variación</strong></div>
+                <div class="legend-item">● Círculo = Estable</div>
+                <div class="legend-item">▲ Flecha arriba = En aumento</div>
+                <div class="legend-item">▼ Flecha abajo = En disminución</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize map
+        const map = L.map('mapContainer').setView([-36.423795, -60.490621], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        let geoJsonLayers = {};
+        const layerNames = ['mi-capa', 'mi-capa-ada'];
+        const layerDisplayNames = { 'mi-capa': 'SRH', 'mi-capa-ada': 'ADA' };
+        const layerToggles = { 'mi-capa': 'srh-toggle', 'mi-capa-ada': 'ada-toggle' };
+        const layerStats = { 'mi-capa': 'srh-stats', 'mi-capa-ada': 'ada-stats' };
+
+        // Fields to display for each layer
+        const layerFields = {
+            'mi-capa': ['MUNICIPIO', 'PUNTO', 'S2 Fecha', 'S3 Fecha', 'info'],
+            'mi-capa-ada': ['Nombre', 'Laguna', 'S2 Fecha', 'S3 Fecha', 'info']
+        };
+
+        // Color mapping for alerts
+        const alertColors = {
+            1: '#28a745',
+            2: '#ffc107',
+            3: '#ff9800',
+            4: '#dc3545'
+        };
+
+        function getSymbol(dif) {
+            if (dif === 0) return '●';
+            if (dif === 1) return '▲';
+            if (dif === -1) return '▼';
+            return '●';
+        }
+
+        function createMarker(feature, latlng, layerName) {
+            const alerta = feature.properties.Alerta || 1;
+            const dif = feature.properties.Dif || 0;
+            const color = alertColors[alerta] || '#28a745';
+            const symbol = getSymbol(dif);
+
+            const html = `
+                <div style="font-size: 24px; color: ${color}; text-shadow: 0 0 3px white; cursor: pointer;">${symbol}</div>
+            `;
+
+            const marker = L.marker(latlng, {
+                icon: L.divIcon({
+                    html: html,
+                    iconSize: [30, 30],
+                    className: ''
+                })
+            });
+
+            // Popup with specific fields
+            const fields = layerFields[layerName];
+            const layerLabel = layerDisplayNames[layerName];
+
+            // Nombre del punto: para SRH es PUNTO, para ADA es Nombre
+            const pointNameField = layerName === 'mi-capa' ? 'PUNTO' : 'Nombre';
+            const pointName = feature.properties[pointNameField] || '-';
+
+            let popupContent = `
+                <div style="font-size: 13px; min-width: 180px;">
+                    <div style="
+                        text-align: center;
+                        font-size: 18px;
+                        font-weight: 800;
+                        letter-spacing: 2px;
+                        color: #2c3e50;
+                        background: #ecf0f1;
+                        border-radius: 6px 6px 0 0;
+                        padding: 6px 10px 2px;
+                        margin-bottom: 2px;
+                        text-transform: uppercase;
+                    ">${layerLabel}</div>
+                    <div style="
+                        text-align: center;
+                        font-size: 15px;
+                        font-weight: 700;
+                        color: #1a5276;
+                        background: #e8f4fc;
+                        border-radius: 0;
+                        padding: 4px 10px 8px;
+                        margin-bottom: 8px;
+                        border-bottom: 2px solid #e0e0e0;
+                    ">${pointName}</div>
+            `;
+            fields.forEach(field => {
+                if (field === pointNameField) return;
+                let value = feature.properties[field] || '-';
+
+                if (field === 'info' && value !== '-') {
+                    const alertStyles = {
+                        'alerta verde':    { bg: '#1e7e34', color: '#ffffff' },
+                        'alerta amarillo': { bg: '#d4a017', color: '#ffffff' },
+                        'alerta naranja':  { bg: '#d35400', color: '#ffffff' },
+                        'alerta roja':     { bg: '#c0392b', color: '#ffffff' }
+                    };
+                    const commaIdx = value.indexOf(',');
+                    let prefix = commaIdx !== -1 ? value.substring(0, commaIdx) : value;
+                    let rest   = commaIdx !== -1 ? value.substring(commaIdx) : '';
+                    const prefixLower = prefix.toLowerCase().trim();
+                    let matched = null;
+                    for (const key of Object.keys(alertStyles)) {
+                        if (prefixLower.includes(key)) { matched = key; break; }
+                    }
+                    if (matched) {
+                        const s = alertStyles[matched];
+                        value = `<span style="display:inline-block;background:${s.bg};color:${s.color};font-weight:700;padding:1px 7px;border-radius:4px;border:1px solid rgba(0,0,0,0.15);">${prefix}</span>${rest}`;
+                    }
+                }
+
+                popupContent += `<div style="padding: 2px 4px;"><strong>${field}:</strong> ${value}</div>`;
+            });
+            popupContent += '</div>';
+
+            marker.bindPopup(popupContent);
+            return marker;
+        }
+
+        function loadGeoJsonLayer(layerName) {
+            return fetch(`${layerName}.geojson`)
+                .then(res => res.json())
+                .then(data => {
+                    const featureGroup = L.featureGroup();
+                    const totalPoints = data.features.length;
+                    
+                    data.features.forEach(feature => {
+                        if (feature.geometry && feature.geometry.coordinates) {
+                            const marker = createMarker(feature, 
+                                [feature.geometry.coordinates[1], feature.geometry.coordinates[0]], 
+                                layerName);
+                            featureGroup.addLayer(marker);
+                        }
+                    });
+                    
+                    geoJsonLayers[layerName] = { data: data, featureGroup: featureGroup };
+                    featureGroup.addTo(map);
+                    
+                    // Update stats
+                    const statsId = layerStats[layerName];
+                    document.getElementById(statsId).innerHTML = `Puntos: ${totalPoints}`;
+                })
+                .catch(err => {
+                    console.warn(`No se pudo cargar ${layerName}.geojson:`, err);
+                    const statsId = layerStats[layerName];
+                    document.getElementById(statsId).innerHTML = `Puntos: 0 (archivo no encontrado)`;
+                });
+        }
+
+        function updateMap() {
+            // Update layer visibility
+            Object.keys(geoJsonLayers).forEach(layerName => {
+                const toggleId = layerToggles[layerName];
+                const isVisible = document.getElementById(toggleId).checked;
+                if (isVisible) {
+                    map.addLayer(geoJsonLayers[layerName].featureGroup);
+                } else {
+                    map.removeLayer(geoJsonLayers[layerName].featureGroup);
+                }
+            });
+            updateChart();
+            updateDashboard();
+        }
+
+        function getVisibleFeatures() {
+            const visibleFeatures = [];
+            const bounds = map.getBounds();
+            
+            Object.keys(geoJsonLayers).forEach(layerName => {
+                const toggleId = layerToggles[layerName];
+                if (!document.getElementById(toggleId).checked) return;
+                
+                geoJsonLayers[layerName].data.features.forEach(feature => {
+                    if (feature.geometry && feature.geometry.coordinates) {
+                        const lat = feature.geometry.coordinates[1];
+                        const lng = feature.geometry.coordinates[0];
+                        // Verificar si el punto está dentro de los bounds visibles
+                        if (bounds.contains(L.latLng(lat, lng))) {
+                            visibleFeatures.push({ feature: feature, layer: layerName });
+                        }
+                    }
+                });
+            });
+            return visibleFeatures;
+        }
+
+        function updateChart() {
+            const visibleFeatures = getVisibleFeatures();
+            const alertCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+            visibleFeatures.forEach(({ feature }) => {
+                const alerta = feature.properties.Alerta || 1;
+                alertCounts[alerta]++;
+            });
+
+            const labels = ['Alerta 1', 'Alerta 2', 'Alerta 3', 'Alerta 4'];
+            const values = [alertCounts[1], alertCounts[2], alertCounts[3], alertCounts[4]];
+            const colors = ['#28a745', '#ffc107', '#ff9800', '#dc3545'];
+
+            const data = [{
+                labels: labels,
+                values: values,
+                type: 'pie',
+                hole: 0.4,
+                marker: { colors: colors },
+                textposition: 'inside',
+                textinfo: 'label+percent'
+            }];
+
+            const layout = {
+                title: { text: 'Distribución de Alertas', font: { size: 14 } },
+                showlegend: false,
+                margin: { l: 20, r: 20, t: 40, b: 20 },
+                font: { size: 11 }
+            };
+
+            Plotly.newPlot('pieChart', data, layout, { responsive: true });
+        }
+
+        function updateDashboard() {
+            const visibleFeatures = getVisibleFeatures();
+            
+            // Contadores por nivel de alerta y variación
+            const alertCounts = {
+                1: { stable: 0, increase: 0, decrease: 0, total: 0 },
+                2: { stable: 0, increase: 0, decrease: 0, total: 0 },
+                3: { stable: 0, increase: 0, decrease: 0, total: 0 },
+                4: { stable: 0, increase: 0, decrease: 0, total: 0 }
+            };
+
+            visibleFeatures.forEach(({ feature }) => {
+                const alerta = feature.properties.Alerta || 1;
+                const dif = feature.properties.Dif || 0;
+                
+                // Actualizar contadores detallados por alerta
+                alertCounts[alerta].total++;
+                if (dif === 0) alertCounts[alerta].stable++;
+                if (dif === 1) alertCounts[alerta].increase++;
+                if (dif === -1) alertCounts[alerta].decrease++;
+            });
+
+            const scorecards = [
+                { title: 'Alerta 4 (Rojo)', value: alertCounts[4].total, class: 'red', subtitle: `Est: ${alertCounts[4].stable} | ↑: ${alertCounts[4].increase} | ↓: ${alertCounts[4].decrease}` },
+                { title: 'Alerta 3 (Naranja)', value: alertCounts[3].total, class: 'orange', subtitle: `Est: ${alertCounts[3].stable} | ↑: ${alertCounts[3].increase} | ↓: ${alertCounts[3].decrease}` },
+                { title: 'Alerta 2 (Amarillo)', value: alertCounts[2].total, class: 'yellow-dark', subtitle: `Est: ${alertCounts[2].stable} | ↑: ${alertCounts[2].increase} | ↓: ${alertCounts[2].decrease}` },
+                { title: 'Alerta 1 (Verde)', value: alertCounts[1].total, class: 'green-dark', subtitle: `Est: ${alertCounts[1].stable} | ↑: ${alertCounts[1].increase} | ↓: ${alertCounts[1].decrease}` },
+                { title: 'Total puntos visibles', value: visibleFeatures.length, class: 'green' }
+            ];
+
+            const dashboardHtml = scorecards.map(card => `
+                <div class="scorecard ${card.class}">
+                    <div class="scorecard-title">${card.title}</div>
+                    <div class="scorecard-value">${card.value}</div>
+                    ${card.subtitle ? `<div class="scorecard-subtitle">${card.subtitle}</div>` : ''}
+                </div>
+            `).join('');
+
+            document.getElementById('dashboardContainer').innerHTML = dashboardHtml;
+        }
+
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            const toggle = header.querySelector('.toggle-btn');
+            content.classList.toggle('hidden');
+            toggle.textContent = content.classList.contains('hidden') ? '+' : '−';
+        }
+
+        function toggleChartPanel() {
+            const wrapper = document.getElementById('chartContentWrapper');
+            const toggle = document.querySelector('#chartContainerHeader .toggle-btn');
+            wrapper.classList.toggle('hidden');
+            toggle.textContent = wrapper.classList.contains('hidden') ? '+' : '−';
+        }
+
+        // Load layers
+        Promise.all(layerNames.map(loadGeoJsonLayer)).then(() => {
+            updateChart();
+            updateDashboard();
+            // Actualizar dinámicamente con zoom
+            map.on('zoomend', () => {
+                updateChart();
+                updateDashboard();
+            });
+            // Actualizar dinámicamente con movimiento
+            map.on('moveend', () => {
+                updateChart();
+                updateDashboard();
+            });
+        });
+
+        // Resize handler for responsive
+        window.addEventListener('resize', () => {
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        });
+    </script>
+<script>window.parent.postMessage({ action: "ready" }, "*"); 
+ 
+window.console = new Proxy(console, {
+  get(target, prop) {
+    if (['log', 'warn', 'error'].includes(prop)) {
+      return new Proxy(target[prop], {
+        apply(fn, thisArg, args) {
+          fn.apply(thisArg, args);
+          window.parent.postMessage({ action: 'console', 
+            type: prop, 
+            args: args.map((arg) => {
+              try {
+                return JSON.stringify(arg).replace(/^["']|["']$/g, '');
+              } catch (e) {
+                return arg;
+              }
+            }) 
+          }, '*');
+        }
+      });
+    }
+    return target[prop];
+  }
+});
+</script></body>
+</html>
