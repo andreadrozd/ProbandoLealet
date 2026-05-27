@@ -186,6 +186,10 @@
         .scorecard.green {
             background: #52be80;
         }
+        .scorecard.blue-pastel {
+            background: #aed6f1;
+            color: #1a3a5c;
+        }
         .scorecard-title {
             font-size: 11px;
             font-weight: 600;
@@ -615,7 +619,7 @@
                 { title: 'Alerta 3 (Naranja)', value: alertCounts[3].total, class: 'orange', subtitle: `Est: ${alertCounts[3].stable} | ↑: ${alertCounts[3].increase} | ↓: ${alertCounts[3].decrease}` },
                 { title: 'Alerta 2 (Amarillo)', value: alertCounts[2].total, class: 'yellow-dark', subtitle: `Est: ${alertCounts[2].stable} | ↑: ${alertCounts[2].increase} | ↓: ${alertCounts[2].decrease}` },
                 { title: 'Alerta 1 (Verde)', value: alertCounts[1].total, class: 'green-dark', subtitle: `Est: ${alertCounts[1].stable} | ↑: ${alertCounts[1].increase} | ↓: ${alertCounts[1].decrease}` },
-                { title: 'Total puntos visibles', value: visibleFeatures.length, class: 'green' }
+                { title: 'Total puntos visibles', value: visibleFeatures.length, class: 'blue-pastel' }
             ];
 
             const dashboardHtml = scorecards.map(card => `
