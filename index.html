@@ -455,9 +455,12 @@
                     <span>Alerta 4 (Rojo)</span>
                 </div>
                 <div style="margin-top: 12px;"><strong>Variación</strong></div>
-                <div class="legend-item">● Círculo = Estable</div>
-                <div class="legend-item">▲ Flecha arriba = En aumento</div>
-                <div class="legend-item">▼ Flecha abajo = En disminución</div>
+                <div class="legend-item"><svg viewBox="0 0 30 30" width="18" height="18" style="vertical-align:middle;margin-right:6px;"><path d="M15 3 L24 15 L18 15 L18 27 L12 27 L12 15 L6 15 Z" fill="#7f8c8d" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/></svg>Flecha arriba = En aumento (color del nivel)</div>
+                <div class="legend-item"><svg viewBox="0 0 30 30" width="18" height="18" style="vertical-align:middle;margin-right:6px;"><path d="M15 27 L24 15 L18 15 L18 3 L12 3 L12 15 L6 15 Z" fill="#7f8c8d" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/></svg>Flecha abajo = En disminución (color del nivel)</div>
+                <div style="margin-top: 10px;"><strong>Estable según nivel</strong></div>
+                <div class="legend-item"><svg viewBox="0 0 30 30" width="18" height="18" style="vertical-align:middle;margin-right:6px;"><circle cx="15" cy="15" r="11" fill="#dc3545" stroke="#ffffff" stroke-width="2"/><path d="M15 8.5 V21.5 M8.5 15 H21.5" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/></svg><svg viewBox="0 0 30 30" width="18" height="18" style="vertical-align:middle;margin-right:6px;"><circle cx="15" cy="15" r="11" fill="#ff9800" stroke="#ffffff" stroke-width="2"/><path d="M15 8.5 V21.5 M8.5 15 H21.5" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/></svg>Rojo / Naranja: círculo con cruz</div>
+                <div class="legend-item"><svg viewBox="0 0 30 30" width="18" height="18" style="vertical-align:middle;margin-right:6px;"><circle cx="15" cy="15" r="11" fill="#ffc107" stroke="#ffffff" stroke-width="2"/><text x="15" y="20.5" text-anchor="middle" font-size="15" font-weight="bold" font-family="Arial, sans-serif" fill="#ffffff">!</text></svg>Amarillo: círculo con "!"</div>
+                <div class="legend-item"><svg viewBox="0 0 30 30" width="18" height="18" style="vertical-align:middle;margin-right:6px;"><circle cx="15" cy="15" r="11" fill="#28a745" stroke="#ffffff" stroke-width="2"/></svg>Verde: círculo</div>
             </div>
         </div>
     </div>
@@ -490,21 +493,47 @@
             4: '#dc3545'
         };
 
-        function getSymbol(dif) {
-            if (dif === 0) return '●';
-            if (dif === 1) return '▲';
-            if (dif === -1) return '▼';
-            return '●';
+        // Devuelve el SVG del marcador segun nivel de alerta (color) y variacion (Dif)
+        function getMarkerSvg(alerta, dif, color) {
+            const stroke = '#ffffff';
+            const open = '<svg viewBox="0 0 30 30" width="30" height="30">';
+            const close = '</svg>';
+
+            // En aumento -> flecha hacia arriba, con el color del nivel
+            if (dif === 1) {
+                return open +
+                    '<path d="M15 3 L24 15 L18 15 L18 27 L12 27 L12 15 L6 15 Z" fill="' + color + '" stroke="' + stroke + '" stroke-width="1.5" stroke-linejoin="round"/>' +
+                    close;
+            }
+            // En disminucion -> flecha hacia abajo, con el color del nivel
+            if (dif === -1) {
+                return open +
+                    '<path d="M15 27 L24 15 L18 15 L18 3 L12 3 L12 15 L6 15 Z" fill="' + color + '" stroke="' + stroke + '" stroke-width="1.5" stroke-linejoin="round"/>' +
+                    close;
+            }
+
+            // Estable (dif === 0) -> circulo + simbolo segun nivel
+            let inner = '';
+            if (alerta === 4 || alerta === 3) {
+                // Rojo / Naranja: cruz blanca en el medio
+                inner = '<path d="M15 8.5 V21.5 M8.5 15 H21.5" stroke="' + stroke + '" stroke-width="3" stroke-linecap="round"/>';
+            } else if (alerta === 2) {
+                // Amarillo: signo de admiracion
+                inner = '<text x="15" y="20.5" text-anchor="middle" font-size="15" font-weight="bold" font-family="Arial, sans-serif" fill="' + stroke + '">!</text>';
+            }
+            // Verde (alerta 1): solo el circulo, sin simbolo
+            return open +
+                '<circle cx="15" cy="15" r="11" fill="' + color + '" stroke="' + stroke + '" stroke-width="2"/>' +
+                inner +
+                close;
         }
 
         function createMarker(feature, latlng, layerName) {
             const alerta = feature.properties.Alerta || 1;
             const dif = feature.properties.Dif || 0;
             const color = alertColors[alerta] || '#28a745';
-            const symbol = getSymbol(dif);
-
             const html = `
-                <div style="font-size: 24px; color: ${color}; text-shadow: 0 0 3px white; cursor: pointer;">${symbol}</div>
+                <div style="cursor: pointer; line-height: 0; filter: drop-shadow(0 0 2px rgba(255,255,255,0.95));">${getMarkerSvg(alerta, dif, color)}</div>
             `;
 
             const marker = L.marker(latlng, {
