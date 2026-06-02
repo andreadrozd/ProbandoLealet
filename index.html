@@ -467,8 +467,8 @@
 
         // Fields to display for each layer
         const layerFields = {
-            'mi-capa': ['MUNICIPIO', 'PUNTO', 'S2 Fecha', 'S3 Fecha', 'info'],
-            'mi-capa-ada': ['Nombre', 'Laguna', 'S2 Fecha', 'S3 Fecha', 'info']
+            'mi-capa': ['MUNICIPIO', 'PUNTO', 'S2 Fecha', 'S3 Fecha', 'info', 'Acciones'],
+            'mi-capa-ada': ['Nombre', 'Laguna', 'S2 Fecha', 'S3 Fecha', 'info', 'Acciones']
         };
 
         // Color mapping for alerts
@@ -589,7 +589,11 @@
                     }
                 }
 
-                popupContent += `<div style="padding: 2px 4px;"><strong>${field}:</strong> ${value}</div>`;
+                if (field === 'Acciones') {
+                    popupContent += `<div style="padding: 4px 4px 2px; font-size: 14px;"><strong>${field}:</strong> ${value}</div>`;
+                } else {
+                    popupContent += `<div style="padding: 2px 4px;"><strong>${field}:</strong> ${value}</div>`;
+                }
             });
             popupContent += '</div>';
 
